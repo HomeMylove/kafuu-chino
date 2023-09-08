@@ -1,0 +1,23 @@
+server:
+  port: 5701
+
+spring:
+  rabbitmq:
+    host: 124.71.159.79
+    port: 5672
+    username: admin
+    password: admin
+
+listen:
+  rabbitmq:
+    dev-queue:
+      name: private
+      expiration: 5000
+      group-id:
+        - 1016640331
+
+    public-queue:
+      name: public
+      expiration: 5000
+
+
