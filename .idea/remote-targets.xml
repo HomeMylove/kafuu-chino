@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="root@124.71.159.79:22" type="ssh/sftp" uuid="f19a915e-0e97-461d-a25a-a19687d5c0e9">
+        <config>
+          <option name="projectRootOnTarget" value="/root/chino/bot" />
+          <option name="serverName" value="root@124.71.159.79:22 password" />
+        </config>
+        <ContributedStateBase type="JavaLanguageRuntime">
+          <config>
+            <option name="homePath" value="/usr/local/java/jdk-17.0.8" />
+            <option name="javaVersionString" value="17.0.8" />
+          </config>
+        </ContributedStateBase>
+        <ContributedStateBase type="MavenRuntime">
+          <config />
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/chino-api/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-api/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-listen/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-listen/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-plugins/plugin-echo/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-plugins/plugin-echo/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-plugins/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-plugins/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-proxy/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/chino-proxy/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+  </component>
+</project>
