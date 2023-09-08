@@ -1,0 +1,23 @@
+{
+  "data": {
+    "age": 0,
+    "area": "",
+    "card": "",
+    "card_changeable": false,
+    "group_id": 1016640331,
+    "join_time": 1648218283,
+    "last_sent_time": 1693818498,
+    "level": "1",
+    "nickname": "莫失",
+    "role": "owner",
+    "sex": "female",
+    "shut_up_timestamp": 0,
+    "title": "",
+    "title_expire_time": 0,
+    "unfriendly": false,
+    "user_id": 2014559177
+  },
+  "message": "",
+  "retcode": 0,
+  "status": "ok"
+}

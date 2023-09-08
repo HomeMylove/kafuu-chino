@@ -1,0 +1,52 @@
+server:
+  port: 5701
+
+spring:
+  rabbitmq:
+    host: 124.71.159.79
+    port: 5672
+    username: admin
+    password: admin
+
+  datasource:
+    url: jdbc:mysql://124.71.159.79:3306/chino?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: root
+    password: Neta@520
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # Redis
+  redis:
+    database: 0
+    host: 124.71.159.79
+    port: 6379
+    password: neta520
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1ms
+        max-idle: 8
+        min-idle: 0
+
+logging:
+  level:
+    com.homemylove.chino.mapper: debug
+
+chino:
+  proxy:
+    host: http://124.71.159.79
+    port: 24466
+    path: /chino
+
+  data:
+    images: /root/robot/data/images
+  listen:
+    rabbitmq:
+      name: public
+  control:
+    super-user:
+      - 2014559177
+      - 3022310950
+    frequency:
+      - 60,10
+      - 5,1
+    master: 2014559177
