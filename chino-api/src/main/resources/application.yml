@@ -1,0 +1,20 @@
+chino:
+  plugin:
+    priority:
+      start-with: 8
+      end-with: 2
+      contains: 4
+      regex: 16
+      equals: 32
+  proxy:
+    host: http://124.71.159.79
+    port: 24466
+    path: /chino
+  listen:
+    rabbitmq:
+      name: public
+
+  control:
+    super-user:
+      - 2014559177
+

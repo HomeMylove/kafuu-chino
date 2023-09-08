@@ -13,7 +13,7 @@ public class StartWithHandler extends AbstractPluginHandler<String> {
     public boolean match(Message message) {
         // 获取 msg 比较前缀
         String msg = message.getMessage();
-        if (msg == null || msg.isEmpty()) return false;
+        if (isEmpty(msg)) return false;
         for (String prefix : getExpectations()) {
             if (!Objects.equals(prefix, "") && msg.startsWith(prefix)) {
                 return true;

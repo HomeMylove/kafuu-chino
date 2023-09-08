@@ -22,31 +22,45 @@ import java.util.Map;
 @Slf4j
 public class ApiChan {
 
-    @Resource
-    @Qualifier("chinoRestTemplate")
-    private RestTemplate restTemplate;
     private static final String GROUP_ID = "group_id";
     private static final String USER_ID = "user_id";
-
     private static final String MESSAGE = "message";
     private static final String AUTO_ESCAPE = "auto_escape";
     private static final String END_POINT = "endPoint";
 
+    private static final HttpHeaders headers = new HttpHeaders();
+
+    static {
+        headers.setContentType(MediaType.APPLICATION_JSON);
+    }
+
     @Resource
     private ObjectMapper objectMapper;
 
-    private static enum IMAGE_TYPE {
-        FILE,
-        HTTP
-    }
+    @Resource
+    @Qualifier("chinoRestTemplate")
+    private RestTemplate restTemplate;
 
     @Resource
     private ChinoProxyProperties proxyProperties;
 
+    /**
+     * 获取目标 url
+     *
+     * @return 目标 url
+     */
     private String getUrl() {
         return proxyProperties.getHost() + ":" + proxyProperties.getPort() + proxyProperties.getPath();
     }
 
+    /**
+     * 发送一条群聊消息
+     *
+     * @param groupId    QQ群号
+     * @param message    message 内容
+     * @param autoEscape 消息内容是否作为纯文本发送 ( 即不解析 CQ 码 )
+     * @return 结果
+     */
     public Result<MessageInfo> sendGroupMsg(Long groupId, String message, boolean autoEscape) {
         HashMap<String, Object> data = new HashMap<>();
         data.put(END_POINT, "send_group_msg");
@@ -54,17 +68,12 @@ public class ApiChan {
         data.put(GROUP_ID, groupId);
         data.put(AUTO_ESCAPE, autoEscape);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
         // 创建HttpEntity对象，将Map作为请求体数据并设置请求头
         HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(data, headers);
 
-        System.out.println("url" + getUrl());
-        System.out.println("message" + message);
         // 发送POST请求，并获取响应
-
         String string = restTemplate.postForObject(getUrl(), requestEntity, String.class);
-        return transfer(string,MessageInfo.class);
+        return transfer(string, MessageInfo.class);
     }
 
     public Result<MessageInfo> sendGroupMsg(Long groupId, String message) {
@@ -72,22 +81,19 @@ public class ApiChan {
     }
 
     public Result<MessageInfo> sendGroupImage(Long groupId, URL url) {
-        return sendGroupImage(groupId, IMAGE_TYPE.HTTP, url.toString());
+        return sendGroupMsg(groupId,new MessageBuilder().image(url).build());
     }
 
     public Result<MessageInfo> sendGroupImage(Long groupId, String file) {
-        return sendGroupImage(groupId, IMAGE_TYPE.FILE, file);
+        return sendGroupMsg(groupId,new MessageBuilder().image(file).build());
     }
 
-    private Result<MessageInfo> sendGroupImage(Long groupId, IMAGE_TYPE type, String path) {
-        StringBuilder sb = new StringBuilder("[CQ:image,file=");
-        if (IMAGE_TYPE.FILE.equals(type)) {
-            sb.append("file://");
-        }
-        sb.append(path).append("]");
-        return sendGroupMsg(groupId, sb.toString());
-    }
-
+    /**
+     * 获取群成员信息
+     * @param groupId QQ群号
+     * @param userId QQ号
+     * @return GroupMemberInfo 信息
+     */
     public Result<GroupMemberInfo> getGroupMemberInfo(Long groupId, Long userId) {
         HashMap<String, Object> data = new HashMap<>();
         data.put(END_POINT, "get_group_member_info");

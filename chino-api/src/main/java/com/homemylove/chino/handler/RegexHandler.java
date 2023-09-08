@@ -19,7 +19,7 @@ public class RegexHandler extends AbstractPluginHandler<String>{
         Pattern compile1 = Pattern.compile("\\{(.+?)\\}");
         Matcher matcher1 = compile1.matcher(rawRegex);
         // 替换为 \w+
-        String regex1 = matcher1.replaceAll("[\\\\w\\\\u4E00-\\\\u9FA5]+");
+        String regex1 = matcher1.replaceAll("[\\\\w\\\\u4E00-\\\\u9FA5\\\\S]+");
         regex1 = "^" + regex1 + "$";
 
         // 替换 \\s+

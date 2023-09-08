@@ -1,181 +1,53 @@
 package com.homemylove.chino.dispatcher;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.homemylove.chino.adapter.EventNode;
 import com.homemylove.chino.adapter.PluginAdapter;
 import com.homemylove.chino.adapter.PluginNode;
-import com.homemylove.chino.annotations.*;
-import com.homemylove.chino.api.MsgInfo;
+import com.homemylove.chino.annotations.Match;
+import com.homemylove.chino.annotations.Param;
+import com.homemylove.chino.api.ApiChan;
 import com.homemylove.chino.entities.Message;
-import com.homemylove.chino.handler.*;
+import com.homemylove.chino.entities.Meta;
 import com.homemylove.chino.proterties.ChinoControlProperties;
-import com.homemylove.chino.proterties.ChinoPluginProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.context.ApplicationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.time.Duration;
-import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
 @Slf4j
-public class PluginDispatcher {
-    private static final DefaultParameterNameDiscoverer discoverer = new DefaultParameterNameDiscoverer();
+public class PluginDispatcher implements DispatcherAble {
 
-    private static final List<PluginNode> pluginList = new ArrayList<>();
+    @Resource
+    private PluginLoader pluginLoader;
+
+    @Resource
+    private TypeFactory typeFactory;
+
+    @Resource
+    private ApiChan apiChan;
+
+    /**
+     * 用于获取参数名
+     */
+    private static final DefaultParameterNameDiscoverer discoverer = new DefaultParameterNameDiscoverer();
 
     private final Class<?> msgClazz = Message.class;
 
-    @Resource
-    private ChinoPluginProperties.Priority priority;
-
-    @Resource
-    private ChinoControlProperties controlProperties;
-
-    @Resource
-    private ApplicationContext context;
-
-    @Resource
-    private RedisTemplate redisTemplate;
-
-
-    @PostConstruct
-    public void loadPlugin() {
-        // 获取含有 @Plugin 注解的插件类
-        String[] plugins = context.getBeanNamesForAnnotation(Plugin.class);
-
-        for (String name : plugins) {
-            // 获取 clazz
-            Class<?> clazz = context.getType(name);
-            log.info(">>> plugin name:{}\tplugin type:{}", name, clazz);
-
-            assert clazz != null;
-            // 获取 bean 存入容器
-            Object plugin = context.getBean(name, clazz);
-            // 每一个方法都要映射
-            Method[] methods = clazz.getDeclaredMethods();
-            for (Method method : methods) {
-                if (method.isAnnotationPresent(Match.class)) {
-                    log.info(">>> Method:{}", method.getName());
-                    PluginAdapter adapter = getPluginAdapter(method);
-                    if (adapter.getPriority() == 0) continue;
-                    pluginList.add(new PluginNode(plugin, method, adapter));
-                }
-            }
-        }
-        Collections.sort(pluginList, new Comparator<PluginNode>() {
-            @Override
-            public int compare(PluginNode o1, PluginNode o2) {
-                return o2.getPluginAdapter().getPriority() - o1.getPluginAdapter().getPriority();
-            }
-        });
-
-        int i = 1;
-        for (PluginNode pluginNode : pluginList) {
-            log.info("i:{}",i++);
-            log.info(pluginNode.getMethod().getName());
-            log.info("priority:{}", pluginNode.getPluginAdapter().getPriority());
-        }
+    public void dispatcher(Message message) {
+        if("message".equals(message.getPostType())) dispatcherPlugin(message);
+        if("notice".equals(message.getPostType())) dispatcherEvent(message);
     }
 
-    private PluginAdapter getPluginAdapter(Method method) {
-        Match match = method.getAnnotation(Match.class);
-        String[] contains = match.contains();
-        String[] startWith = match.startWith();
-        String[] endWith = match.endWith();
-        String regex = match.regex();
-        String[] equals = match.equals();
-
-        PluginAdapter adapter = new PluginAdapter();
-        if (startWith.length > 0) {
-            StartWithHandler startWithHandler = new StartWithHandler(startWith);
-            startWithHandler.setOrder(priority.getStartWith() << 1);
-            adapter.addPluginHandler(startWithHandler);
-        }
-        if (endWith.length > 0) {
-            EndWithHandler endWithHandler = new EndWithHandler(endWith);
-            endWithHandler.setOrder(priority.getEndWith() << 1);
-            adapter.addPluginHandler(endWithHandler);
-        }
-        if (contains.length > 0) {
-            ContainsHandler containsHandler = new ContainsHandler(contains);
-            containsHandler.setOrder(priority.getContains() << 1);
-            adapter.addPluginHandler(containsHandler);
-        }
-        if (!"".equals(regex)) {
-            RegexHandler regexHandler = new RegexHandler(regex);
-            regexHandler.setOrder(priority.getRegex() << 1);
-            adapter.addPluginHandler(regexHandler);
-        }
-        if (equals.length > 0) {
-            EqualsHandler equalsHandler = new EqualsHandler(equals);
-            equalsHandler.setOrder(priority.getEquals() << 1);
-            adapter.addPluginHandler(equalsHandler);
-        }
-
-        // 如果有 @Anyway 试一试
-        if (method.isAnnotationPresent(Anyway.class)) {
-            AnywayHandler anywayHandler = new AnywayHandler();
-            anywayHandler.setOrder(1);
-            adapter.addPluginHandler(anywayHandler);
-        }
-        // 如果有 @Priority 增加优先级
-        if (method.isAnnotationPresent(Priority.class)) {
-            Priority priorityAnno = method.getAnnotation(Priority.class);
-            adapter.setPriority(adapter.getPriority() + priorityAnno.value().getValue());
-        }
-
-        return adapter;
-    }
-
-    private boolean lessThan(Date time1,Date time2){
-        Duration between = Duration.between(time1.toInstant(), time2.toInstant());
-        return Math.abs(between.getSeconds()) < 60L;
-    }
-
-    public void handleMessage(Message message) {
-        Long groupId = message.getGroupId();
-        Date now = new Date();
-        String key = "control:" + groupId;
-        String banKey = "ban:" + groupId;
-
-        Long userId = message.getUserId();
-        List<Long> superUser = controlProperties.getSuperUser();
-        if(!superUser.contains(userId)){
-            // 判断是不是禁止了
-            Boolean ban = (Boolean)redisTemplate.opsForValue().get(banKey);
-            if(ban != null && ban){
-                return;
-            }
-        }
-
-        while (true){
-            MsgInfo last = (MsgInfo) redisTemplate.opsForList().rightPop(key);
-            if(last!=null){
-                if(lessThan(now,last.getTime())){
-                    redisTemplate.opsForList().rightPush(key,last);
-                    break;
-                }
-            }else {
-                break;
-            }
-        }
-        // 判断是不是10条
-        Long size = redisTemplate.opsForList().size(key);
-        if(size!= null && size >= 10){
-            log.info("超出限制");
-            return;
-        }
-
+    public void dispatcherPlugin(Message message) {
+        List<PluginNode> pluginList = pluginLoader.getPluginList();
         try {
             for (PluginNode node : pluginList) {
                 PluginAdapter adapter = node.getPluginAdapter();
@@ -191,12 +63,21 @@ public class PluginDispatcher {
                     String[] parameterNames = discoverer.getParameterNames(method);
                     Parameter[] parameters = method.getParameters();
 
-
                     assert parameterNames != null;
+                    // 装配参数
                     Object[] args = new Object[parameterNames.length];
 
                     for (int i = 0; i < parameterNames.length; i++) {
                         Parameter parameter = parameters[i];
+
+                       if( Meta.class.equals(parameter.getType())){
+                           args[i] = typeFactory.getMeta(message.getSelfId());
+                           continue;
+                       }else if (Message.class.equals(parameter.getType())) {
+                           args[i] = message;
+                           continue;
+                       }
+
                         // 获取参数
                         // 看这个参数有没有 @Param 注解
                         Param param = parameter.getAnnotation(Param.class);
@@ -204,8 +85,8 @@ public class PluginDispatcher {
                             String value = param.value();
 //                            // 取出那部分的值
 //                            // 取出 regex
-                            String regex = rawRegex.replace("{" + value + "}", "([\\w\\u4E00-\\u9FA5]+)")
-                                    .replaceAll("\\{.*?\\}", "[\\\\w\\\\u4E00-\\\\u9FA5]+")
+                            String regex = rawRegex.replace("{" + value + "}", "([\\w\\S\\u4E00-\\u9FA5]+)")
+                                    .replaceAll("\\{.*?\\}", "[\\\\w\\\\S\\\\u4E00-\\\\u9FA5]+")
                                     .replaceAll("\\s+", "\\\\s+");
 
                             regex = "^" + regex + "$";
@@ -213,20 +94,28 @@ public class PluginDispatcher {
                             Matcher matcher = compile.matcher(message.getMessage());
 
                             if (matcher.matches()) {
-                                args[i] = matcher.group(1);
-                                continue;
+                                // 处理参数类型
+                                args[i] = parse(matcher.group(1), parameter.getType());
                             }
+                        } else {
+                            String parameterName = parameterNames[i];
+                            Field field = msgClazz.getDeclaredField(parameterName);
+                            field.setAccessible(true);
+                            Object o = field.get(message);
+                            args[i] = parse(o, parameter.getType());
                         }
                         // 判断是不是特殊值
-
-                        String parameterName = parameterNames[i];
-                        Field field = msgClazz.getDeclaredField(parameterName);
-                        field.setAccessible(true);
-                        Object o = field.get(message);
-                        args[i] = o;
                     }
-
                     Object invoke = method.invoke(bean, args);
+                    Class<?> returnType = method.getReturnType();
+                    // 如果返回为String，试着将其发送
+                    if(returnType.equals(String.class) && !"".equals(invoke)){
+                        apiChan.sendGroupMsg(message.getGroupId(),(String) invoke);
+                    } else if (returnType.equals(Boolean.class)) {
+                        // 如果返回为 Boolean 且为false 继续往下走
+                        boolean ret = (Boolean) invoke;
+                        if(!ret) continue;
+                    }
                     return;
                 }
             }
@@ -235,20 +124,72 @@ public class PluginDispatcher {
         }
     }
 
-    @RabbitListener(queues = "${chino.listen.rabbitmq.name:public}")
-    public void listen(String request) {
-        log.info("收到消息:{}", request);
+    public void dispatcherEvent(Message message) {
+        List<EventNode> eventList = pluginLoader.getEventList();
+        for (EventNode eventNode : eventList) {
+            try {
+                if (eventNode.getHandler().match(message)) {
 
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            Message message = objectMapper.readValue(request, Message.class);
-            message.setMessage(message.getMessage().trim());
+                    Object bean = eventNode.getBean();
+                    Method method = eventNode.getMethod();
+                    method.setAccessible(true);
 
-            log.info("=======================");
-            handleMessage(message);
-        } catch (Exception e) {
-            log.error("error" + e);
+                    String[] parameterNames = discoverer.getParameterNames(method);
+                    Parameter[] parameters = method.getParameters();
+
+                    assert parameterNames != null;
+                    // 装配参数
+                    Object[] args = new Object[parameterNames.length];
+
+                    for (int i = 0; i < parameterNames.length; i++) {
+                        Parameter parameter = parameters[i];
+
+                        if( Meta.class.equals(parameter.getType())){
+                            args[i] = typeFactory.getMeta(message.getSelfId());
+                            continue;
+                        } else if (Message.class.equals(parameter.getType())) {
+                            args[i] = message;
+                            continue;
+                        }
+
+                        String parameterName = parameterNames[i];
+                        Field field = msgClazz.getDeclaredField(parameterName);
+                        field.setAccessible(true);
+                        Object o = field.get(message);
+                        args[i] = parse(o, parameter.getType());
+                    }
+                    Object invoke = method.invoke(bean, args);
+                    Class<?> returnType = method.getReturnType();
+                    // 如果返回为String，试着将其发送
+                    if(returnType.equals(String.class) && !"".equals(invoke)){
+                        apiChan.sendGroupMsg(message.getGroupId(),(String) invoke);
+                    } else if (returnType.equals(Boolean.class)) {
+                        // 如果返回为 Boolean 且为false 继续往下走
+                        boolean ret = (Boolean) invoke;
+                        if(!ret) continue;
+                    }
+                    return;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("error" + e.getMessage());
+            }
         }
+    }
 
+
+
+    private <T> T parse(Object value, Class<T> clazz) {
+        switch (clazz.getName()) {
+            case "java.lang.String":
+                return (T) value.toString();
+            case "java.lang.Integer":
+            case "int":
+                return (T) Integer.valueOf(value.toString());
+            case "java.lang.Long":
+            case "long":
+                return (T) Long.valueOf(value.toString());
+            default:
+                return (T) value;
+        }
     }
 }

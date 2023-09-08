@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.lang.annotation.*;
 
+/**
+ * 优先级
+ * 标注之后会额外提供一系列优先级
+ */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

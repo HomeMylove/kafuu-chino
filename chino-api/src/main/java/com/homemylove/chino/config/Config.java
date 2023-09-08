@@ -7,8 +7,10 @@ import com.homemylove.chino.proterties.ChinoListenProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.web.client.RestTemplate;
 
+@EnableAspectJAutoProxy
 @Configuration
 @EnableConfigurationProperties({
         ChinoListenProperties.class,

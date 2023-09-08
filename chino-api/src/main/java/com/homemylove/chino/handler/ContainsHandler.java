@@ -4,6 +4,10 @@ import com.homemylove.chino.entities.Message;
 
 import java.util.Objects;
 
+/**
+ * Contains 处理器
+ * 包含时通过
+ */
 public class ContainsHandler extends AbstractPluginHandler<String>{
 
     public ContainsHandler(String[] expectations){
@@ -12,9 +16,8 @@ public class ContainsHandler extends AbstractPluginHandler<String>{
 
     @Override
     public boolean match(Message message) {
-        // 获取 msg
         String msg = message.getMessage();
-        if (msg == null || msg.isEmpty()) return false;
+        if (isEmpty(msg)) return false;
         for (String contain : getExpectations()) {
             if (!Objects.equals(contain, "") && msg.contains(contain)) {
                 return true;

@@ -6,14 +6,14 @@ import java.util.Objects;
 
 public class EqualsHandler extends AbstractPluginHandler<String>{
 
-    public EqualsHandler(String[] exps){
-        super(exps);
+    public EqualsHandler(String[] expectations){
+        super(expectations);
     }
 
     @Override
     public boolean match(Message message) {
         String msg = message.getMessage();
-        if (msg == null || msg.isEmpty()) return false;
+        if (isEmpty(msg)) return false;
         for (String exp : getExpectations()) {
             if (!Objects.equals(exp, "") && msg.equals(exp)) {
                 return true;

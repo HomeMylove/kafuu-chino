@@ -10,4 +10,8 @@ import java.util.List;
 @ConfigurationProperties(prefix = "chino.control")
 public class ChinoControlProperties {
     private List<Long> superUser = new ArrayList<>();
+
+    private List<Long[]> frequency = new ArrayList<>();
+
+    private Long master;
 }
