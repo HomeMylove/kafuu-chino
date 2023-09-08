@@ -1,0 +1,8 @@
+server:
+  port: 24466
+  address: 0.0.0.0
+
+proxy:
+  host: http://127.0.0.1
+  port: 5700
+
